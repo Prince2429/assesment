@@ -1,0 +1,480 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "jsCode": "const inputText = $input.first().json.solution.response || \"\";\nconst chunkSize = 3500;\nconst chunks = [];\n\nfor (let i = 0; i < inputText.length; i += chunkSize) {\n  chunks.push({\n    chunkText: inputText.substring(i, i + chunkSize),\n  });\n}\n\n// Return multiple items (one per chunk)\nreturn chunks.map(chunk => ({ json: chunk }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        920,
+        -100
+      ],
+      "id": "d02047ca-3af7-45c0-beb8-e37e62336c7c",
+      "name": "Code"
+    },
+    {
+      "parameters": {
+        "jsCode": "// The input 'items' is an array of objects. Each object has `item.json.output.content`.\n// We'll collect only the non-empty contents, merge them, and output a single item.\nconst mergedTextArr = [];\n\nfor (const item of items) {\n  const content = item.json.output?.content || \"\";\n  \n  // Check if it's not empty or whitespace\n  if (content.trim().length > 0) {\n    mergedTextArr.push(content.trim());\n  }\n}\n\n// Join them with some spacing\nconst combinedText = mergedTextArr.join(\"\\n\\n\");\n\n// Return a single item with the merged text\nreturn [\n  {\n    json: {\n      combinedText\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1560,
+        -100
+      ],
+      "id": "689d3b55-6c0c-4c8b-a458-25f642334a6f",
+      "name": "Merging"
+    },
+    {
+      "parameters": {
+        "jsCode": "const inputText = $input.first().json.text || \"\";\nconst chunkSize = 4500;\nconst chunks = [];\n\nfor (let i = 0; i < inputText.length; i += chunkSize) {\n  chunks.push({\n    chunkText: inputText.substring(i, i + chunkSize),\n  });\n}\n\n// Return multiple items (one per chunk)\nreturn chunks.map(chunk => ({ json: chunk }));\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1980,
+        -100
+      ],
+      "id": "4f7a696e-1195-4ee8-9a05-c8b11c16ddd4",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "text": "={{ $json.chunkText }}",
+        "attributes": {
+          "attributes": [
+            {
+              "name": "content",
+              "description": "=The main article content, excluding HTML tags, navigation, ads, and other irrelevant sections."
+            }
+          ]
+        },
+        "options": {
+          "systemPromptTemplate": "=You are an expert extraction algorithm.\n\nExtract the main article content from the provided HTML text. Ignore HTML tags, navigation, ads, sidebars, comments, and other irrelevant sections. Return only the plain text of the article for this question:\n{{ $(\"Edit Fields\").first().json.chatInput }}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "typeVersion": 1,
+      "position": [
+        1200,
+        -100
+      ],
+      "id": "edd09720-7ed1-409e-84f5-53ebfce0fe8e",
+      "name": "Information Extractor1"
+    },
+    {
+      "parameters": {
+        "model": "llama-3.3-70b-versatile",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        1180,
+        80
+      ],
+      "id": "91bf49a3-b5de-4d38-bc0b-430bab471e6e",
+      "name": "Groq Chat Model3",
+      "credentials": {
+        "groqApi": {
+          "id": "bLggY2C5BB8UPTFY",
+          "name": "Paid"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "e25b92d4-b7b9-45ae-9809-2b5120486be7",
+              "name": "text",
+              "value": "={{ $json.combinedText }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1840,
+        -100
+      ],
+      "id": "ae97c643-df08-4bf3-b3db-4022da81dda0",
+      "name": "Edit Fields1"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2780,
+        100
+      ],
+      "id": "8592c304-be2b-4db8-bd27-898e6b5c70d3",
+      "name": "Groq Chat Model",
+      "credentials": {
+        "groqApi": {
+          "id": "yB0IvZDc672lVAwT",
+          "name": "Free"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://publisher.scrappey.com/api/v1",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "key",
+              "value": "OQtjvLe13SyD2wtDE2dngX9Itf0FyCyh41TP5hdLGPnkYcCdcqOCg8bGRArD"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "cmd",
+              "value": "request.get"
+            },
+            {
+              "name": "url",
+              "value": "={{ $json.urls }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        700,
+        -100
+      ],
+      "id": "664dd375-2d23-4de1-930b-21914bcd93a2",
+      "name": "Scrappey"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://google.serper.dev/search",
+        "sendHeaders": true,
+        "specifyHeaders": "json",
+        "jsonHeaders": "{ \n    \"X-API-KEY\": \"ee2d8c7401c38e1e9cafc3089208d9f0d5e658ff\", \n    \"Content-Type\": \"application/json\"\n  }",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"q\": \"{{ $json.chatInput }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        -100
+      ],
+      "id": "cbcfa5a0-57cc-41bd-8d09-c4b16cfdabec",
+      "name": "Serper"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Access the Serper API response\nconst results = $input.first().json.organic || [];\n\n// Extract URLs from the organic results and limit to top 10\nconst urls = results.map(item => item.link).slice(0, 7);\n\n// Format the URLs as an array of objects for looping\nconst urlItems = urls.map(url => ({ urls: url }));\n\n// Return the array of URL objects to pass to the next node\nreturn urlItems.map(item => ({ json: item }));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        440,
+        -100
+      ],
+      "id": "262cf9d9-20ee-408c-8db9-620587f60f8a",
+      "name": "Code2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=Answer following question:\n{{ $(\"Edit Fields\").first().json.chatInput }}\nfrom this:\n{{ $json.combinedText }}",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 1.9,
+      "position": [
+        2760,
+        -100
+      ],
+      "id": "6d2ca1d7-66b6-46e3-b692-b6d6c25d95ed",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8529587c-bb17-43ea-a1c8-e61672fa03a4",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        0,
+        -100
+      ],
+      "id": "183d8e89-8840-4c9e-a71f-57f05d269213",
+      "name": "Edit Fields"
+    },
+    {
+      "parameters": {
+        "chunkOverlap": 300,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chainSummarization",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        -100
+      ],
+      "id": "f60b74cb-a822-4c84-b5b6-4af8deb9a7d0",
+      "name": "Summarization Chain"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGroq",
+      "typeVersion": 1,
+      "position": [
+        2140,
+        80
+      ],
+      "id": "4228b161-dd39-4745-be55-387c9faf8be5",
+      "name": "Groq Chat Model1",
+      "credentials": {
+        "groqApi": {
+          "id": "yB0IvZDc672lVAwT",
+          "name": "Free"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The input 'items' is an array of objects. Each object has `item.json.output.content`.\n// We'll collect only the non-empty contents, merge them, and output a single item.\nconst mergedTextArr = [];\n\nfor (const item of items) {\n  const content = $input.first().json.response.text  || \"\";\n  \n  // Check if it's not empty or whitespace\n  if (content.trim().length > 0) {\n    mergedTextArr.push(content.trim());\n  }\n}\n\n// Join them with some spacing\nconst combinedText = mergedTextArr.join(\"\\n\\n\");\n\n// Return a single item with the merged text\nreturn [\n  {\n    json: {\n      combinedText\n    }\n  }\n];\n"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2520,
+        -100
+      ],
+      "id": "83864a30-0c6c-486f-a650-b23a654936e8",
+      "name": "Merging1"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "initialMessages": "Hi there! 👋\nIm search query agent, here to assist you. Drop your query below!",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.1,
+      "position": [
+        -220,
+        -100
+      ],
+      "id": "2ebb0dd5-ffde-4934-9fc9-4f83666be20c",
+      "name": "When chat message received",
+      "webhookId": "fcfa7de3-1645-428e-a3b8-1f9d0650aa3a"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Information Extractor1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merging": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Information Extractor1": {
+      "main": [
+        [
+          {
+            "node": "Merging",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model3": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Information Extractor1",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields1": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Scrappey": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Serper": {
+      "main": [
+        [
+          {
+            "node": "Code2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code2": {
+      "main": [
+        [
+          {
+            "node": "Scrappey",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Edit Fields": {
+      "main": [
+        [
+          {
+            "node": "Serper",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarization Chain": {
+      "main": [
+        [
+          {
+            "node": "Merging1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Groq Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Summarization Chain",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merging1": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When chat message received": {
+      "main": [
+        [
+          {
+            "node": "Edit Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "9a7f40b0-99f4-4613-8f0f-7ecde7ee8877",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "54ab1f8f61dade9d5692dce3a23ed5b037789f0b6b56537c0a7b0dc549750130"
+  },
+  "id": "utnsHCjTBQRGr4ev",
+  "tags": []
+}
